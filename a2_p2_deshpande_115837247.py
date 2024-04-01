@@ -50,7 +50,7 @@ class LanguageModelingClass:
       return inputs
     optimizer = AdamW(self.model.parameters(), lr=5e-5, weight_decay=0.001)
     self.model.train()
-    epochs = 3
+    epochs = 1
     print("Starting fineTuning")
     for epoch in range(epochs):
       total_loss = 0.0  # Initialize total loss for the epoch
