@@ -8,6 +8,7 @@ import math
 import time
 
 import csv
+from tqdm import tqdm
 
 import sklearn.model_selection
 import sklearn.metrics
@@ -45,29 +46,32 @@ class LanguageModelingClass:
       else:
         text_ans='no'
       truncated_text_entry = passage[:max_passage_length] + '\n' + question + '?\n' + text_ans
-      inputs = self.tokenizer(truncated_text_entry, return_tensors='pt').to(self.device)
+      inputs = self.tokenizer(truncated_text_entry, return_tensors='pt',padding="max_length",max_length=512).to(self.device)
       # Tokenize combined text
       return inputs
     tokenized_dataset = dataset['train'].map(tokenize_and_combine_examples,batched=False)
+    tokenized_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask'])
     data_loader = DataLoader(tokenized_dataset,shuffle=True,batch_size=4)
     optimizer = AdamW(self.model.parameters(), lr=0.01, weight_decay=0.00001)
     self.model.train()
     epochs = 1
-    print("Starting fineTuning")
+    print("Starting fineTuning")  
     for epoch in range(epochs):
       total_loss = 0.0  # Initialize total loss for the epoch
-      num_entries = 0   
+      num_entries = 0
       for batch in data_loader:
-        outputs = self.model(**batch)
+        batch = {k: v.to(self.device) for k, v in batch.items()} 
+        outputs = self.model(**batch,labels=batch['input_ids'])
         loss = outputs.loss  
         loss.backward()  
         optimizer.step()  
         optimizer.zero_grad() 
         total_loss += loss.item()
-        num_entries+=1
+        num_entries+=4
+        if num_entries % 1000 == 0:
+          print(f"Epoch: {epoch}, Total Loss: {total_loss}, Batch: {num_entries/1000}", flush=True)
       avg_loss = total_loss / num_entries
       print(f"Epoch: {epoch}, Average Loss: {avg_loss}", flush=True)
-
   def getValidationScore(self, dataset):
     predictions = []
     actual_labels = []
