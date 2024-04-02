@@ -48,26 +48,26 @@ class LanguageModelingClass:
       inputs = self.tokenizer(truncated_text_entry, return_tensors='pt').to(self.device)
       # Tokenize combined text
       return inputs
-    optimizer = AdamW(self.model.parameters(), lr=5e-5, weight_decay=0.001)
+    tokenized_dataset = dataset['train'].map(tokenize_and_combine_examples,batched=False)
+    data_loader = DataLoader(tokenized_dataset,shuffle=True,batch_size=4)
+    optimizer = AdamW(self.model.parameters(), lr=0.01, weight_decay=0.00001)
     self.model.train()
     epochs = 1
     print("Starting fineTuning")
     for epoch in range(epochs):
       total_loss = 0.0  # Initialize total loss for the epoch
       num_entries = 0   
-      for entry in dataset['train']:
-        inputs = tokenize_and_combine_examples(entry)
-        outputs = self.model(**inputs,labels=inputs["input_ids"])
+      for batch in data_loader:
+        outputs = self.model(**batch)
         loss = outputs.loss  
         loss.backward()  
         optimizer.step()  
         optimizer.zero_grad() 
         total_loss += loss.item()
         num_entries+=1
-        if num_entries % 1000 == 0:
-          print(f"Epoch {epoch}, Entry {num_entries}: Loss {loss.item()}", flush=True)
       avg_loss = total_loss / num_entries
       print(f"Epoch: {epoch}, Average Loss: {avg_loss}", flush=True)
+
   def getValidationScore(self, dataset):
     predictions = []
     actual_labels = []
