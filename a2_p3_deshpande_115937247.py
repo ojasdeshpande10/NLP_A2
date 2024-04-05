@@ -18,7 +18,7 @@ from transformers import AutoTokenizer
 from transformers import PreTrainedTokenizerFast
 from datasets import load_dataset
 from collections import defaultdict
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 
 class RobertaLMMod(nn.Module):
     def __init__(self):
