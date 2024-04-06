@@ -59,12 +59,14 @@ def train_boolq(boolq_dataset,device):
         optimizer.step()
         if i%100==0:
           print(f"Batch {i}/{len(train_loader)} - Training Loss: {loss.item()/len(batch):.3f}")
+    torch.save(model.state_dict(), "roberta_binary_classifier_state_dict.pt")
     return model
 
 
 def validate_boolq(model,boolq_dataset,device):
     predictions = []
     actual_labels = []
+    list_no=[]
     tokenized_datasets = boolq_dataset['validation'].map(tokenize, batched=True,batch_size=8)
     tokenized_datasets.set_format('torch', columns=['input_ids', 'attention_mask', 'labels'])
     validation_loader = DataLoader(tokenized_datasets, batch_size=8)
@@ -75,9 +77,13 @@ def validate_boolq(model,boolq_dataset,device):
             labels = batch['labels'].to(device)
             outputs = model(input_ids, attention_mask)
             probs = torch.sigmoid(outputs).squeeze()
-            batch_predictions = (probs > 0.5).long()
+            
+            if probs<0.5:
+               list_no.append(1)   
+            batch_predictions = (probs > 0.5).int()
             predictions.extend(batch_predictions.cpu().numpy())
             actual_labels.extend(labels.cpu().numpy())
+    print(len(list_no))
     accuracy = accuracy_score(actual_labels, predictions)
     precision, recall, f1, _ = precision_recall_fscore_support(actual_labels, predictions, average=None, labels=[1, 0])
     macro_f1 = f1_score(actual_labels, predictions, average='macro')
